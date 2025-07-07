@@ -1,0 +1,17 @@
+services:
+  postgres:
+    image: postgres:17.5-alpine3.22
+    environment:
+      POSTGRES_PASSWORD: 123456
+      POSTGRES_USER: rinha2025
+      POSTGRES_DB: rinha2025
+    volumes:
+      - ./postgres/init.sql:/docker-entrypoint-initdb.d/init.sql
+    ports:
+      - 5423:5432
+
+networks:
+  backend:
+    driver: bridge
+  payment-processor:
+    external: true

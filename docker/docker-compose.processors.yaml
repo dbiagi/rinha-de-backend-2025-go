@@ -1,0 +1,19 @@
+services:
+  payment-processor-default:
+    image: zanfranceschi/payment-processor
+    networks:
+      - payment-processor
+    ports:
+      - 8001:8080
+
+  payment-processor-fallback:
+    image: zanfranceschi/payment-processor
+    networks:
+      - payment-processor
+    ports:
+      - 8002:8080
+
+networks:
+  payment-processor:
+    name: payment-processor
+    driver: bridge

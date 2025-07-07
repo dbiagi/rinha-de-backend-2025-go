@@ -1,0 +1,9 @@
+version: 2
+updates:
+  - package-ecosystem: "gomod"
+    directory: "/" # Root directory of the repository
+    schedule:
+      interval: "weekly" # Check for updates weekly
+    commit-message:
+      prefix: "deps"
+    open-pull-requests-limit: 5

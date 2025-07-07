@@ -1,0 +1,50 @@
+name: Lint & Test
+on:
+  push:
+    branches:
+      - main
+  pull_request: 
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: read
+
+jobs:
+  lint:
+    name: Lint and test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: 'go.mod'
+
+      - name: Install dependencies
+        run: make deps
+
+      - name: Build and Test
+        run: make test-coverage
+
+      - name: GolangCI Lint
+        uses: golangci/golangci-lint-action@v7
+        with:
+          version: v2.1.6
+          only-new-issues: true
+
+      - name: Sonar Cloud Scan
+        uses: sonarsource/sonarqube-scan-action@master
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          
+      - name: SonarQube Server Quality Gate check
+        id: sonarqube-quality-gate-check
+        uses: sonarsource/sonarqube-quality-gate-action@master
+        with:
+          pollingTimeoutSec: 600
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }} 

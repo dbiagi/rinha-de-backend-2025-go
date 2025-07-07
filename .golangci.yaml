@@ -1,0 +1,40 @@
+version: "2"
+linters:
+  enable:
+    - goconst
+    - misspell
+    - nakedret
+    - unconvert
+    - godox
+    - iface
+    - importas
+    
+  exclusions:
+    generated: lax
+    paths:
+      - third_party$
+      - builtin$
+      - examples$
+formatters:
+  enable:
+    - gofmt
+    - goimports
+  settings:
+    gofmt:
+      simplify: true
+    goimports:
+      local-prefixes:
+        - rinha2025
+  exclusions:
+    generated: lax
+    paths:
+      - third_party$
+      - builtin$
+      - examples$
+
+output:
+  formats:
+    text:
+      path: stderr
+    checkstyle:
+      path: ./golangci_report.out
