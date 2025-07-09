@@ -8,8 +8,8 @@ import (
 
 func main() {
 	rootCmd := cobra.Command{
-		Use:   "shopping-bag",
-		Short: "Shopping bag app CLI.",
+		Use:   "rinha",
+		Short: "Rinha app CLI.",
 	}
 
 	rootCmd.AddCommand(command.NewServeCommand())

@@ -19,6 +19,7 @@ const (
 type Configuration struct {
 	WebConfig
 	AppConfig
+	DatabaseConfig
 }
 
 type AppConfig struct {
@@ -36,13 +37,19 @@ type WebConfig struct {
 	GracefulShutdownDisabled bool
 }
 
-type DynamoDBConfig struct {
-	Endpoint string
+type DatabaseConfig struct {
+	Host         string
+	Port         int
+	User         string
+	Password     string
+	DatabaseName string
 }
 
 func LoadConfig(env string) Configuration {
-	configs := loadFromFile()
-	port, _ := strconv.Atoi(configs["PORT"])
+	loadFromFile()
+
+	port, _ := strconv.Atoi(os.Getenv("PORT"))
+	dbPort, _ := strconv.Atoi(os.Getenv("DB_PORT"))
 
 	return Configuration{
 		WebConfig: WebConfig{
@@ -57,19 +64,28 @@ func LoadConfig(env string) Configuration {
 			Version:     "1.0.0",
 			Environment: env,
 		},
+		DatabaseConfig: DatabaseConfig{
+			Host:         os.Getenv("DB_HOST"),
+			Port:         dbPort,
+			User:         os.Getenv("DB_USER"),
+			Password:     os.Getenv("DB_PASSWORD"),
+			DatabaseName: os.Getenv("DB_NAME"),
+		},
 	}
 }
 
-func loadFromFile() map[string]string {
+func loadFromFile() {
 	path, _ := os.Getwd()
-	configFilePath := fmt.Sprintf("%s/.env", path)
+	configFilePath := fmt.Sprintf("%s/../.env", path)
 
-	configs, err := godotenv.Read(configFilePath)
+	if _, err := os.Stat(configFilePath); os.IsNotExist(err) {
+		slog.Warn("Config file does not exist.")
+		return
+	}
+
+	err := godotenv.Load(configFilePath)
 
 	if err != nil {
 		slog.Error("Error loading .env file.", slog.String("error", err.Error()))
-		panic(err)
 	}
-
-	return configs
 }

@@ -15,6 +15,7 @@ import (
 	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
 
+	"rinha2025/internal/database"
 	"rinha2025/pkg/middleware"
 )
 
@@ -46,9 +47,19 @@ func (s *Server) Start() {
 	server, router := createServer(s.Configuration.WebConfig)
 
 	handlers := createHandlers(s.Configuration)
-
+	db := connectToDatabase(s.DatabaseConfig)
 	registerRoutesAndMiddlewares(router, handlers)
-	configureGracefullShutdown(server, s.Configuration.WebConfig)
+	configureGracefullShutdown(server, db, s.Configuration.WebConfig)
+}
+
+func connectToDatabase(cfg config.DatabaseConfig) *database.Database {
+	db, err := database.NewDatabase(cfg)
+
+	if err != nil {
+		os.Exit(2)
+	}
+
+	return db
 }
 
 func (s *Server) ForceShutdown() {
@@ -82,7 +93,7 @@ func registerRoutesAndMiddlewares(router *mux.Router, h appHandlers) {
 	router.Use(handlers.CompressHandler)
 }
 
-func configureGracefullShutdown(server *http.Server, webConfig config.WebConfig) {
+func configureGracefullShutdown(server *http.Server, db *database.Database, webConfig config.WebConfig) {
 	slog.Info("Configuring graceful shutdown.")
 
 	c := make(chan os.Signal, 1)
@@ -92,8 +103,12 @@ func configureGracefullShutdown(server *http.Server, webConfig config.WebConfig)
 	ctx, cancel := context.WithTimeout(context.Background(), webConfig.ShutdownTimeout)
 	defer cancel()
 
-	server.Shutdown(ctx)
 	slog.Info("Shutting down server")
+	server.Shutdown(ctx)
+
+	slog.Info("Closing database connection")
+	db.Close()
+
 	os.Exit(0)
 }
 
