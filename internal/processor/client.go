@@ -15,13 +15,6 @@ type PaymentProcessorClient struct {
 	fallbackHost string
 }
 
-type PaymentProcessorType string
-
-const (
-	DefaultPaymentProcessor  PaymentProcessorType = "DEFAULT"
-	FallbackPaymentProcessor PaymentProcessorType = "FALLBACK"
-)
-
 func NewPaymentProcessorClient(defaultHost string, fallbackHost string) PaymentProcessorClient {
 	return PaymentProcessorClient{
 		defaultHost:  defaultHost,
@@ -29,9 +22,9 @@ func NewPaymentProcessorClient(defaultHost string, fallbackHost string) PaymentP
 	}
 }
 
-func (c *PaymentProcessorClient) RequestCreatePayment(p domain.PaymentCreationRequest, ppt PaymentProcessorType) error {
+func (c *PaymentProcessorClient) RequestCreatePayment(p domain.PaymentCreationRequest, ppt domain.PaymentProcessorType) error {
 	host := c.defaultHost
-	if ppt == FallbackPaymentProcessor {
+	if ppt == domain.FallbackPaymentProcessor {
 		host = c.fallbackHost
 	}
 
@@ -50,12 +43,43 @@ func (c *PaymentProcessorClient) RequestCreatePayment(p domain.PaymentCreationRe
 		return processorerrors.ErrUnknown
 	}
 
+	defer resp.Body.Close()
+
 	if err != nil {
 		slog.Error("Processor returned an error", slog.String("error", err.Error()))
 		return err
 	}
 
 	return nil
+}
+
+func (c *PaymentProcessorClient) HealthCheck() (*domain.HealthCheckResponse, error) {
+	endpoint := fmt.Sprintf("http://%s/payments/service-health", c.defaultHost)
+
+	r, err := createRequest(http.MethodGet, endpoint, nil)
+
+	if err != nil {
+		slog.Error("Error creating the request", slog.String("error", err.Error()))
+		return nil, processorerrors.ErrCreatingRequest
+	}
+
+	resp, err := http.DefaultClient.Do(r)
+
+	if err != nil {
+		slog.Error("Health check returned an error")
+		return nil, processorerrors.ErrUnknown
+	}
+
+	defer resp.Body.Close()
+
+	hc := &domain.HealthCheckResponse{}
+	err = json.NewDecoder(resp.Body).Decode(hc)
+	if err != nil {
+		slog.Error("Error deserialing the response body", slog.String("error", err.Error()))
+		return nil, processorerrors.ErrUnknown
+	}
+
+	return hc, nil
 }
 
 func createRequest(method string, url string, body any) (*http.Request, error) {

@@ -15,3 +15,21 @@ type PaymentCreationRequest struct {
 type PaymentCreationResponse struct {
 	Message string `json:"message"`
 }
+
+type HealthCheckResponse struct {
+	Failing         bool `json:"failing"`
+	MinResponseTime int  `json:"minResponseTime"`
+}
+
+type ProcessorStatus struct {
+	Failing         bool
+	MinResponseTime int
+	Code            PaymentProcessorType
+}
+
+type PaymentProcessorType string
+
+const (
+	DefaultPaymentProcessor  PaymentProcessorType = "DEFAULT"
+	FallbackPaymentProcessor PaymentProcessorType = "FALLBACK"
+)

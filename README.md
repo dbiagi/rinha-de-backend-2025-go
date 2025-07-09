@@ -5,7 +5,7 @@
 - [x] Run payment processors
 - [x] Build project template
 - [x] Connect to postgres 
-- [ ] Connect to processors via http
+- [x] Connect to processors via http
 - [ ] Implement the endpoints
 - [ ] Implement processor health checks
 - [ ] Integrated tests

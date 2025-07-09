@@ -42,7 +42,7 @@ serve-dev:
 
 infra-up:
 	@echo "Starting infrastructure..."
-	${DOCKER_COMPOSE} up -d
+	${DOCKER_COMPOSE} up -d --remove-orphans 
 
 infra-down:
 	@echo "Stopping infrastructure..."
