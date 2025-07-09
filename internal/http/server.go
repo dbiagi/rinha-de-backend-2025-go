@@ -8,10 +8,14 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 
 	"rinha2025/internal/config"
 	healthhandler "rinha2025/internal/health/handler"
+	"rinha2025/internal/processor"
+	"rinha2025/internal/processor/domain"
 
+	"github.com/google/uuid"
 	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
 
@@ -45,6 +49,13 @@ func NewServer(c config.Configuration) *Server {
 
 func (s *Server) Start() {
 	server, router := createServer(s.Configuration.WebConfig)
+
+	c := processor.NewPaymentProcessorClient(s.Configuration.DefaultHost, s.Configuration.FallbackHost)
+	c.RequestCreatePayment(domain.PaymentCreationRequest{
+		CorrelationID: uuid.Must(uuid.NewRandom()),
+		Amount:        10.5,
+		RequestedAt:   time.Now(),
+	}, processor.DefaultPaymentProcessor)
 
 	handlers := createHandlers(s.Configuration)
 	db := connectToDatabase(s.DatabaseConfig)

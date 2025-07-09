@@ -20,6 +20,7 @@ type Configuration struct {
 	WebConfig
 	AppConfig
 	DatabaseConfig
+	ProcessorConfig
 }
 
 type AppConfig struct {
@@ -43,6 +44,11 @@ type DatabaseConfig struct {
 	User         string
 	Password     string
 	DatabaseName string
+}
+
+type ProcessorConfig struct {
+	DefaultHost  string
+	FallbackHost string
 }
 
 func LoadConfig(env string) Configuration {
@@ -70,6 +76,10 @@ func LoadConfig(env string) Configuration {
 			User:         os.Getenv("DB_USER"),
 			Password:     os.Getenv("DB_PASSWORD"),
 			DatabaseName: os.Getenv("DB_NAME"),
+		},
+		ProcessorConfig: ProcessorConfig{
+			DefaultHost:  os.Getenv("DEFAULT_PROCESSOR_HOST"),
+			FallbackHost: os.Getenv("FALLBACK_PROCESSOR_HOST"),
 		},
 	}
 }
