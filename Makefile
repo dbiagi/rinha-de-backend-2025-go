@@ -42,11 +42,13 @@ serve-dev:
 
 infra-up:
 	@echo "Starting infrastructure..."
-	${DOCKER_COMPOSE} up -d --remove-orphans 
-
+	${DOCKER_COMPOSE} up -d 
+	make processors-infra-up
+	
 infra-down:
 	@echo "Stopping infrastructure..."
 	${DOCKER_COMPOSE} down
+	make processors-infra-down
 
 deps:
 	@echo "Installing dependencies..."
@@ -65,7 +67,7 @@ tools:
 	${GOINSTALL} go.uber.org/mock/mockgen@latest
 	${GOINSTALL} github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.1.5
 
-infra-up-processors:
+processors-infra-up:
 	${DOCKER_COMPOSE_PROCESSOR} up -d
-infra-down-processors:
+processors-infra-down:
 	${DOCKER_COMPOSE_PROCESSOR} down

@@ -12,11 +12,15 @@ import (
 	"rinha2025/internal/config"
 	healthhandler "rinha2025/internal/health/handler"
 	"rinha2025/internal/processor"
+	"rinha2025/internal/processor/repository"
 
 	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
 
 	"rinha2025/internal/database"
+	paymenthandler "rinha2025/internal/payment/handler"
+	paymentrepo "rinha2025/internal/payment/repository"
+	paymentservice "rinha2025/internal/payment/service"
 	"rinha2025/pkg/middleware"
 )
 
@@ -35,6 +39,7 @@ type (
 
 	appHandlers struct {
 		healthhandler.HealthCheckHandler
+		paymenthandler.PaymentHandler
 	}
 )
 
@@ -46,12 +51,8 @@ func NewServer(c config.Configuration) *Server {
 
 func (s *Server) Start() {
 	server, router := createServer(s.Configuration.WebConfig)
-
-	c := processor.NewPaymentProcessorClient(s.Configuration.DefaultHost, s.Configuration.FallbackHost)
-	c.HealthCheck()
-
-	handlers := createHandlers(s.Configuration)
 	db := connectToDatabase(s.DatabaseConfig)
+	handlers := createHandlers(s.Configuration, db)
 	registerRoutesAndMiddlewares(router, handlers)
 	configureGracefullShutdown(server, db, s.Configuration.WebConfig)
 }
@@ -93,7 +94,9 @@ func createServer(webConfig config.WebConfig) (*http.Server, *mux.Router) {
 func registerRoutesAndMiddlewares(router *mux.Router, h appHandlers) {
 	router.Use(middleware.TraceIdMiddleware)
 	router.Use(mux.CORSMethodMiddleware(router))
-	router.HandleFunc("/health", h.HealthCheckHandler.Health).Methods("GET")
+	router.HandleFunc("/health", h.HealthCheckHandler.Health).Methods(http.MethodGet)
+	router.HandleFunc("/payments", h.PaymentHandler.CreatePayment).Methods(http.MethodPost)
+	router.HandleFunc("/payments-summary", h.PaymentHandler.Summary).Methods(http.MethodGet)
 	router.Use(handlers.CompressHandler)
 }
 
@@ -116,8 +119,21 @@ func configureGracefullShutdown(server *http.Server, db *database.Database, webC
 	os.Exit(0)
 }
 
-func createHandlers(c config.Configuration) appHandlers {
+func createHandlers(c config.Configuration, db *database.Database) appHandlers {
 	return appHandlers{
 		HealthCheckHandler: healthhandler.NewHealthCheckHandler(),
+		PaymentHandler:     createPaymentHandler(c.ProcessorConfig, db),
 	}
+}
+
+func createPaymentHandler(c config.ProcessorConfig, db *database.Database) paymenthandler.PaymentHandler {
+	repository := repository.NewProcessorStatusRepository(db.Connection)
+	client := processor.NewPaymentProcessorClient(c.DefaultHost, c.FallbackHost)
+	service := processor.NewPaymentProcessorService(client, repository)
+
+	paymentRepo := paymentrepo.NewPaymentRepository(db.Connection)
+	paymentService := paymentservice.NewPaymentService(paymentRepo, service)
+	handler := paymenthandler.NewPaymentHandler(paymentService)
+
+	return handler
 }

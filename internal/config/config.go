@@ -1,7 +1,6 @@
 package config
 
 import (
-	"fmt"
 	"log/slog"
 	"os"
 	"strconv"
@@ -47,15 +46,19 @@ type DatabaseConfig struct {
 }
 
 type ProcessorConfig struct {
-	DefaultHost  string
-	FallbackHost string
+	DefaultHost            string
+	FallbackHost           string
+	MaxAllowedResponseTime int
 }
 
 func LoadConfig(env string) Configuration {
-	loadFromFile()
+	filePath := os.Getenv("CONFIG_FILE_PATH")
+
+	loadFromFile(filePath)
 
 	port, _ := strconv.Atoi(os.Getenv("PORT"))
 	dbPort, _ := strconv.Atoi(os.Getenv("DB_PORT"))
+	mrt, _ := strconv.Atoi(os.Getenv("PROCESSOR_MAX_RESPONSE_TIME"))
 
 	return Configuration{
 		WebConfig: WebConfig{
@@ -78,16 +81,14 @@ func LoadConfig(env string) Configuration {
 			DatabaseName: os.Getenv("DB_NAME"),
 		},
 		ProcessorConfig: ProcessorConfig{
-			DefaultHost:  os.Getenv("DEFAULT_PROCESSOR_HOST"),
-			FallbackHost: os.Getenv("FALLBACK_PROCESSOR_HOST"),
+			DefaultHost:            os.Getenv("PROCESSOR_DEFAULT_HOST"),
+			FallbackHost:           os.Getenv("PROCESSOR_FALLBACK_HOST"),
+			MaxAllowedResponseTime: mrt,
 		},
 	}
 }
 
-func loadFromFile() {
-	path, _ := os.Getwd()
-	configFilePath := fmt.Sprintf("%s/../.env", path)
-
+func loadFromFile(configFilePath string) {
 	if _, err := os.Stat(configFilePath); os.IsNotExist(err) {
 		slog.Warn("Config file does not exist.")
 		return

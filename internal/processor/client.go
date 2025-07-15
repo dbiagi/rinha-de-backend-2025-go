@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
-	"rinha2025/internal/processor/domain"
+	"rinha2025/internal/domain"
 	processorerrors "rinha2025/internal/processor/errors"
 )
 
@@ -38,8 +38,11 @@ func (c *PaymentProcessorClient) RequestCreatePayment(p domain.PaymentCreationRe
 
 	resp, err := http.DefaultClient.Do(r)
 
-	// TODO: Handle the diferent types of status code 4xx and 5xx
-	if resp.StatusCode != http.StatusOK {
+	if is5xxResponse(resp.StatusCode) {
+		return processorerrors.ErrCreatingRequest
+	}
+
+	if !is2xxReponse(resp.StatusCode) {
 		return processorerrors.ErrUnknown
 	}
 
@@ -103,4 +106,12 @@ func createRequest(method string, url string, body any) (*http.Request, error) {
 	r.Header.Add("Content-Type", "application/json")
 
 	return r, nil
+}
+
+func is5xxResponse(status int) bool {
+	return status >= 500 && status < 600
+}
+
+func is2xxReponse(status int) bool {
+	return status >= 200 && status < 300
 }
