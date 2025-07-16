@@ -32,11 +32,11 @@ func (r *PaymentRepository) Create(payment domain.Payment) error {
 }
 
 func (r *PaymentRepository) Summary(from time.Time, to time.Time) (*domain.PaymentSummary, error) {
-	query := `SELECT pp.code, SUM(p.amount), COUNT(1), p.processor_id
+	query := `SELECT pp.code, SUM(p.amount), COUNT(1)
 			FROM payments p
 			INNER JOIN payment_processor pp ON pp.id = p.processor_id
 			WHERE p.requested_at BETWEEN $1 AND $2 
-			GROUP BY p.processor_id, pp.code`
+			GROUP BY pp.code`
 	rows, err := r.db.Query(query, from.Format(time.RFC3339), to.Format(time.RFC3339))
 
 	if err != nil {
