@@ -22,9 +22,10 @@ type PaymentProcessorResult struct {
 }
 
 type Payment struct {
-	CorrelationID uuid.UUID `json:"correlationId"`
-	Amount        float32   `json:"amount"`
-	RequestedAt   time.Time `json:"requestedAt"`
+	CorrelationID uuid.UUID
+	Amount        float32
+	RequestedAt   time.Time
+	ProcessorID   int
 }
 
 type HealthCheckResponse struct {
@@ -32,11 +33,18 @@ type HealthCheckResponse struct {
 	MinResponseTime int  `json:"minResponseTime"`
 }
 
-type PaymentProcesor struct {
+type PaymentProcessor struct {
+	ID              int
 	Failing         bool
 	MinResponseTime int
 	Code            PaymentProcessorType
-	CheckedAt       time.Time
+	Health          ProcessorHealth
+	Host            string
+}
+
+type ProcessorHealth struct {
+	Failing         bool
+	MinResponseTime int
 }
 
 type PaymentProcessorType string

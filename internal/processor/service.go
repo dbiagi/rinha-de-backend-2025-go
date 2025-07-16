@@ -5,82 +5,121 @@ import (
 	"rinha2025/internal/domain"
 	processorerrors "rinha2025/internal/processor/errors"
 	"rinha2025/internal/processor/repository"
+	"time"
 )
 
 const MaxAcceptableResponseTime = 100
 
 type PaymentProcessorService struct {
-	client            PaymentProcessorClient
-	repository        repository.PaymentProcessorRepository
-	defaultProcessor  domain.PaymentProcesor
-	fallbackProcessor domain.PaymentProcesor
+	client            *PaymentProcessorClient
+	repository        *repository.PaymentProcessorRepository
+	defaultProcessor  domain.PaymentProcessor
+	fallbackProcessor domain.PaymentProcessor
 }
 
-func NewPaymentProcessorService(c PaymentProcessorClient, r repository.PaymentProcessorRepository) PaymentProcessorService {
-	return PaymentProcessorService{
-		client:     c,
-		repository: r,
-		defaultProcessor: domain.PaymentProcesor{
-			Failing:         false,
-			Code:            domain.DefaultPaymentProcessor,
-			MinResponseTime: 0,
-		},
-		fallbackProcessor: domain.PaymentProcesor{
-			Failing:         false,
-			Code:            domain.FallbackPaymentProcessor,
-			MinResponseTime: 0,
-		},
+type PaymentCreateResult struct {
+	ProcessorID int
+}
+
+type ServiceConfig struct {
+	*PaymentProcessorClient
+	*repository.PaymentProcessorRepository
+	DefaultHost  string
+	FallbackHost string
+}
+
+func NewPaymentProcessorService(c ServiceConfig) PaymentProcessorService {
+	p, err := c.PaymentProcessorRepository.Processors()
+
+	if err != nil {
+		slog.Error("Error creating the payment processors", slog.String("error", err.Error()))
+		panic(1)
 	}
+
+	pps := PaymentProcessorService{
+		client:     c.PaymentProcessorClient,
+		repository: c.PaymentProcessorRepository,
+	}
+
+	for _, pp := range p {
+		switch pp.Code {
+		case domain.DefaultPaymentProcessor:
+			pps.defaultProcessor = pp
+			pps.defaultProcessor.Health = domain.ProcessorHealth{
+				Failing:         false,
+				MinResponseTime: 0,
+			}
+			pps.defaultProcessor.Host = c.DefaultHost
+		case domain.FallbackPaymentProcessor:
+			pps.fallbackProcessor = pp
+			pps.fallbackProcessor.Health = domain.ProcessorHealth{
+				Failing:         false,
+				MinResponseTime: 0,
+			}
+			pps.fallbackProcessor.Host = c.FallbackHost
+		}
+	}
+
+	pps.startHealthCheckWorker()
+
+	return pps
 }
 
-func (s *PaymentProcessorService) CreatePayment(r domain.PaymentCreationRequest) error {
-	s.updateHealthStatus()
+func (s *PaymentProcessorService) CreatePayment(r domain.PaymentCreationRequest) (*PaymentCreateResult, error) {
+	p := s.selectProcessor()
 
-	processorType := s.decideSelectedProcessor()
+	err := s.client.RequestCreatePayment(r, p)
 
-	err := s.client.RequestCreatePayment(r, processorType)
-
-	if err != nil && processorType == domain.DefaultPaymentProcessor {
+	if err != nil && p.Code == domain.DefaultPaymentProcessor {
 		slog.Error("Error with the default processor, using fallback", slog.String("error", err.Error()))
-		errf := s.client.RequestCreatePayment(r, domain.FallbackPaymentProcessor)
+		errf := s.client.RequestCreatePayment(r, s.fallbackProcessor)
 
 		if errf != nil {
 			slog.Error("Error with the fallback processor", slog.String("error", errf.Error()))
-			return processorerrors.ErrFallbackError
+			return nil, processorerrors.ErrFallbackError
 		}
 	}
 
-	if err != nil && processorType == domain.FallbackPaymentProcessor {
+	if err != nil && p.Code == domain.FallbackPaymentProcessor {
 		slog.Error("Error with the fallback processor", slog.String("error", err.Error()))
-		return processorerrors.ErrFallbackError
+		return nil, processorerrors.ErrFallbackError
 	}
 
-	return nil
+	pcr := &PaymentCreateResult{
+		ProcessorID: p.ID,
+	}
+
+	return pcr, nil
 }
 
-func (s *PaymentProcessorService) decideSelectedProcessor() domain.PaymentProcessorType {
+func (s *PaymentProcessorService) selectProcessor() domain.PaymentProcessor {
 	if !s.defaultProcessor.Failing || s.defaultProcessor.MinResponseTime < MaxAcceptableResponseTime {
-		return domain.DefaultPaymentProcessor
+		return s.defaultProcessor
 	}
-	return domain.FallbackPaymentProcessor
+	return s.fallbackProcessor
 }
 
-func (s *PaymentProcessorService) updateHealthStatus() {
-	processors, err := s.repository.FindStatus(domain.DefaultPaymentProcessor)
+func (s *PaymentProcessorService) startHealthCheckWorker() {
+	interval := time.Second * 5
+	ticker := time.NewTicker(interval)
+	go func() {
+		for {
+			<-ticker.C
+			go s.doUpdateHealth(&s.defaultProcessor)
+			go s.doUpdateHealth(&s.fallbackProcessor)
+		}
+	}()
+
+}
+
+func (s *PaymentProcessorService) doUpdateHealth(p *domain.PaymentProcessor) {
+	r, err := s.client.HealthCheck(*p)
 
 	if err != nil {
-		slog.Error("Error fetching the processor status")
+		slog.Error("Error updating the health check status", slog.String("error", err.Error()))
 		return
 	}
 
-	for _, p := range processors {
-		switch p.Code {
-		case domain.DefaultPaymentProcessor:
-			s.defaultProcessor.Failing = p.Failing
-			s.defaultProcessor.MinResponseTime = p.MinResponseTime
-		case domain.FallbackPaymentProcessor:
-			s.fallbackProcessor.Failing = p.Failing
-			s.fallbackProcessor.MinResponseTime = p.MinResponseTime
-		}
-	}
+	p.Failing = r.Failing
+	p.MinResponseTime = r.MinResponseTime
 }

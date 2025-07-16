@@ -11,24 +11,14 @@ import (
 )
 
 type PaymentProcessorClient struct {
-	defaultHost  string
-	fallbackHost string
 }
 
-func NewPaymentProcessorClient(defaultHost string, fallbackHost string) PaymentProcessorClient {
-	return PaymentProcessorClient{
-		defaultHost:  defaultHost,
-		fallbackHost: fallbackHost,
-	}
+func NewPaymentProcessorClient() *PaymentProcessorClient {
+	return &PaymentProcessorClient{}
 }
 
-func (c *PaymentProcessorClient) RequestCreatePayment(p domain.PaymentCreationRequest, ppt domain.PaymentProcessorType) error {
-	host := c.defaultHost
-	if ppt == domain.FallbackPaymentProcessor {
-		host = c.fallbackHost
-	}
-
-	endpoint := fmt.Sprintf("http://%s/payments", host)
+func (c *PaymentProcessorClient) RequestCreatePayment(p domain.PaymentCreationRequest, pp domain.PaymentProcessor) error {
+	endpoint := fmt.Sprintf("http://%s/payments", pp.Host)
 	r, err := createRequest(http.MethodPost, endpoint, p)
 
 	if err != nil {
@@ -56,9 +46,10 @@ func (c *PaymentProcessorClient) RequestCreatePayment(p domain.PaymentCreationRe
 	return nil
 }
 
-func (c *PaymentProcessorClient) HealthCheck() (*domain.HealthCheckResponse, error) {
-	endpoint := fmt.Sprintf("http://%s/payments/service-health", c.defaultHost)
+func (c *PaymentProcessorClient) HealthCheck(pp domain.PaymentProcessor) (*domain.HealthCheckResponse, error) {
+	endpoint := fmt.Sprintf("http://%s/payments/service-health", pp.Host)
 
+	slog.Info(fmt.Sprintf("Checking the health of processor %s", string(pp.Code)))
 	r, err := createRequest(http.MethodGet, endpoint, nil)
 
 	if err != nil {

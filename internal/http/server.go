@@ -128,8 +128,13 @@ func createHandlers(c config.Configuration, db *database.Database) appHandlers {
 
 func createPaymentHandler(c config.ProcessorConfig, db *database.Database) paymenthandler.PaymentHandler {
 	repository := repository.NewProcessorStatusRepository(db.Connection)
-	client := processor.NewPaymentProcessorClient(c.DefaultHost, c.FallbackHost)
-	service := processor.NewPaymentProcessorService(client, repository)
+	client := processor.NewPaymentProcessorClient()
+	service := processor.NewPaymentProcessorService(processor.ServiceConfig{
+		PaymentProcessorClient:     client,
+		PaymentProcessorRepository: repository,
+		DefaultHost:                c.DefaultHost,
+		FallbackHost:               c.FallbackHost,
+	})
 
 	paymentRepo := paymentrepo.NewPaymentRepository(db.Connection)
 	paymentService := paymentservice.NewPaymentService(paymentRepo, service)

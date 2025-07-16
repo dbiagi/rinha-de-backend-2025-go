@@ -23,7 +23,7 @@ func NewPaymentService(r *repository.PaymentRepository, ps processor.PaymentProc
 func (s *PaymentService) Create(request domain.PaymentCreationRequest) error {
 	request.RequestedAt = time.Now()
 
-	err := s.processorService.CreatePayment(request)
+	result, err := s.processorService.CreatePayment(request)
 
 	if err != nil {
 		return err
@@ -33,6 +33,7 @@ func (s *PaymentService) Create(request domain.PaymentCreationRequest) error {
 		CorrelationID: request.CorrelationID,
 		Amount:        request.Amount,
 		RequestedAt:   request.RequestedAt,
+		ProcessorID:   result.ProcessorID,
 	}
 
 	err = s.repository.Create(p)

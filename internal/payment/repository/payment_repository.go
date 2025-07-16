@@ -15,8 +15,14 @@ func NewPaymentRepository(db *sql.DB) *PaymentRepository {
 }
 
 func (r *PaymentRepository) Create(payment domain.Payment) error {
-	query := "INSERT INTO payments (correlation_id, amount, requested_at) VALUES ($1, $2, $3)"
-	_, err := r.db.Exec(query, payment.CorrelationID.String(), payment.Amount, payment.RequestedAt.Format(time.RFC3339))
+	query := "INSERT INTO payments (correlation_id, amount, requested_at, processor_id) VALUES ($1, $2, $3, $4)"
+	_, err := r.db.Exec(
+		query,
+		payment.CorrelationID.String(),
+		payment.Amount,
+		payment.RequestedAt.Format(time.RFC3339),
+		payment.ProcessorID,
+	)
 
 	if err != nil {
 		return err
