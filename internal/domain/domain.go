@@ -45,6 +45,7 @@ type PaymentProcessor struct {
 type ProcessorHealth struct {
 	Failing         bool
 	MinResponseTime int
+	ProcessorID     int
 }
 
 type PaymentProcessorType string

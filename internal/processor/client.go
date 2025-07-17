@@ -17,7 +17,7 @@ func NewPaymentProcessorClient() *PaymentProcessorClient {
 	return &PaymentProcessorClient{}
 }
 
-func (c *PaymentProcessorClient) RequestCreatePayment(p domain.PaymentCreationRequest, pp domain.PaymentProcessor) error {
+func (c *PaymentProcessorClient) RequestCreatePayment(p domain.PaymentCreationRequest, pp *domain.PaymentProcessor) error {
 	endpoint := fmt.Sprintf("http://%s/payments", pp.Host)
 	r, err := createRequest(http.MethodPost, endpoint, p)
 

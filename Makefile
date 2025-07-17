@@ -1,18 +1,24 @@
 # Test
-COVERAGE_REPORT = coverage.out
+TEST_COVERAGE_REPORT = coverage.out
 TEST_REPORT = report.out
 TEST_FILES = ./internal/...
 TEST_FILES_INTEGRATION = ./tests/...
 
 # Docker
-COMPOSE_FILE = ./docker/docker-compose.dev.yaml
-DOCKER_COMPOSE = docker compose -f "${COMPOSE_FILE}"
-COMPOSE_PROCESSOR_FILE = ./docker/docker-compose.processors.yaml
-DOCKER_COMPOSE_PROCESSOR = docker compose -f "${COMPOSE_PROCESSOR_FILE}"
+DOCKER_COMPOSE_FILE = ./docker/docker-compose.dev.yaml
+DOCKER_COMPOSE = docker compose -f "${DOCKER_COMPOSE_FILE}"
+DOCKER_COMPOSE_PROCESSOR_FILE = ./docker/docker-compose.processors.yaml
+DOCKER_COMPOSE_PROCESSOR = docker compose -f "${DOCKER_COMPOSE_PROCESSOR_FILE}"
+DOCKER_IMAGE = dbiagi/rinha-de-backend-2025-go
+DOCKER_IMAGE_VERSION = latest
+DOCKER_BUILD = docker build
+DOCKER_PUSH = docker push
 
 # Go
 GOEXEC = go
 GOINSTALL = ${GOEXEC} install
+GO_BUILD_ENVS=CGO_ENABLED=0 GOOS=linux
+GO_BUILD_FLAGS=-a -installsuffix cgo -ldflags "-s -w"
 
 .PHONY: all tests test-unit test-integration test-coverage serve-dev infra-up infra-down deps build tools infra-up-processors infra-down-processors
 
@@ -22,7 +28,7 @@ tests:
 
 test-unit:
 	@echo "Running tests..."
-	${GOEXEC} test -v -coverprofile="${COVERAGE_REPORT}" ${TEST_FILES}
+	${GOEXEC} test -v -coverprofile="${TEST_COVERAGE_REPORT}" ${TEST_FILES}
 
 test-coverage:
 	@echo "Resolving dependencies..."
@@ -57,7 +63,7 @@ deps:
 
 build:
 	@echo "Building..."
-	${GOEXEC} build -o bin/app cmd/main.go
+	${GO_BUILD_ENVS} ${GOEXEC} build ${GO_BUILD_FLAGS} -o ./bin/app ./cmd/main.go
 
 lint:
 	@echo "Running linter..."
@@ -69,5 +75,10 @@ tools:
 
 processors-infra-up:
 	${DOCKER_COMPOSE_PROCESSOR} up -d
+
 processors-infra-down:
 	${DOCKER_COMPOSE_PROCESSOR} down
+
+build-image:
+	${DOCKER_BUILD} . -t ${DOCKER_IMAGE}:${DOCKER_IMAGE_VERSION}
+	${DOCKER_PUSH} ${DOCKER_IMAGE}:${DOCKER_IMAGE_VERSION}

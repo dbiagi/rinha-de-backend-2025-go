@@ -19,8 +19,7 @@ RUN apk update && apk upgrade && \
 
 WORKDIR /app 
 
-EXPOSE 8080
+EXPOSE 9999
 
 COPY --from=builder /app/bin /app/bin
-COPY --from=builder /app/.env /app/.env
-CMD /app/bin/app serve
+CMD ["/app/bin/app", "serve"]

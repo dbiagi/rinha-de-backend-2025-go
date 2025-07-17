@@ -13,5 +13,6 @@ func main() {
 	}
 
 	rootCmd.AddCommand(command.NewServeCommand())
+	rootCmd.AddCommand(command.NewWorkerCommand())
 	rootCmd.Execute()
 }

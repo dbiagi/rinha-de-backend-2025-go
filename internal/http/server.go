@@ -61,6 +61,7 @@ func connectToDatabase(cfg config.DatabaseConfig) *database.Database {
 	db, err := database.NewDatabase(cfg)
 
 	if err != nil {
+		slog.Error("Error connecting to database", slog.String("error", err.Error()))
 		os.Exit(2)
 	}
 
