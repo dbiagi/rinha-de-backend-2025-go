@@ -49,7 +49,6 @@ func (c *PaymentProcessorClient) RequestCreatePayment(p domain.PaymentCreationRe
 func (c *PaymentProcessorClient) HealthCheck(pp domain.PaymentProcessor) (*domain.HealthCheckResponse, error) {
 	endpoint := fmt.Sprintf("http://%s/payments/service-health", pp.Host)
 
-	slog.Info(fmt.Sprintf("Checking the health of processor %s", string(pp.Code)))
 	r, err := createRequest(http.MethodGet, endpoint, nil)
 
 	if err != nil {
@@ -60,7 +59,7 @@ func (c *PaymentProcessorClient) HealthCheck(pp domain.PaymentProcessor) (*domai
 	resp, err := http.DefaultClient.Do(r)
 
 	if err != nil {
-		slog.Error("Health check returned an error")
+		slog.Error("Health check returned an error", slog.String("error", err.Error()))
 		return nil, processorerrors.ErrUnknown
 	}
 

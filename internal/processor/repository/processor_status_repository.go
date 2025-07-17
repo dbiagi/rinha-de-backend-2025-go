@@ -39,14 +39,14 @@ func (r *PaymentProcessorRepository) Processors() ([]*domain.PaymentProcessor, e
 func (r *PaymentProcessorRepository) UpdateHealth(p *domain.PaymentProcessor) error {
 	query := `
 		UPDATE payment_processor
-		SET failing = @failing, min_response_time = @rt
-		WHERE id = @id
+		SET failing = $2, min_response_time = $3
+		WHERE id = $1
 	`
 	_, err := r.db.Exec(
 		query,
-		sql.Named("id", p.ID),
-		sql.Named("failing", p.Failing),
-		sql.Named("rt", p.MinResponseTime),
+		p.ID,
+		p.Failing,
+		p.MinResponseTime,
 	)
 
 	if err != nil {

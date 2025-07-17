@@ -19,4 +19,5 @@ CREATE TABLE payments (
     processor_id INT REFERENCES payment_processor(id),
     requested_at TIMESTAMP NOT NULL
 );
-CREATE INDEX idx_payments_processor_id ON payments (processor_id, requested_at);
+CREATE INDEX idx_payments_processor_id_requested_at ON payments (processor_id, requested_at);
+CREATE INDEX idx_payments_requested_at ON payments (requested_at);

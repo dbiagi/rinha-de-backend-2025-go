@@ -2,6 +2,7 @@ package handler
 
 import (
 	"encoding/json"
+	"fmt"
 	"log/slog"
 	"net/http"
 	"rinha2025/internal/domain"
@@ -60,6 +61,7 @@ func (ph *PaymentHandler) Summary(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	slog.Info(fmt.Sprintf("Getting summary from=%s to=%s", from, to))
 	summary := ph.service.Summary(fromTime, toTime)
 
 	httputil.NewJsonResponse(httputil.WithBody(summary)).Response(w, r)

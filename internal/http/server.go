@@ -54,6 +54,7 @@ func (s *Server) Start() {
 	db := connectToDatabase(s.DatabaseConfig)
 	handlers := createHandlers(s.Configuration, db)
 	registerRoutesAndMiddlewares(router, handlers)
+	slog.Info("Server started 🚀")
 	configureGracefullShutdown(server, db, s.Configuration.WebConfig)
 }
 

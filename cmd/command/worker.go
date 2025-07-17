@@ -1,6 +1,7 @@
 package command
 
 import (
+	"fmt"
 	"log/slog"
 	"rinha2025/internal/config"
 	"rinha2025/internal/database"
@@ -43,6 +44,7 @@ func work(cmd *cobra.Command, args []string) {
 		cfg:    &cfg,
 	}
 
+	slog.Info("Worker started 🚀")
 	w.start()
 }
 
@@ -74,7 +76,13 @@ func (w *worker) updateHealth(p *domain.PaymentProcessor) {
 	p.Failing = r.Failing
 	p.MinResponseTime = r.MinResponseTime
 
-	w.repo.UpdateHealth(p)
+	slog.Info(fmt.Sprintf("Updating processor %s to Failing=%v, MinResponseTime=%d", p.Code, p.Failing, p.MinResponseTime))
+
+	err = w.repo.UpdateHealth(p)
+
+	if err != nil {
+		slog.Error("Error updating the health status on database", slog.String("error", err.Error()))
+	}
 }
 
 func (w *worker) processors() []*domain.PaymentProcessor {

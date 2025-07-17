@@ -1,6 +1,7 @@
 package service
 
 import (
+	"fmt"
 	"log/slog"
 	"rinha2025/internal/domain"
 	"rinha2025/internal/payment/repository"
@@ -22,6 +23,8 @@ func NewPaymentService(r *repository.PaymentRepository, ps processor.PaymentProc
 
 func (s *PaymentService) Create(request domain.PaymentCreationRequest) error {
 	request.RequestedAt = time.Now()
+
+	slog.Info(fmt.Sprintf("Creating payment for request=%+v", request))
 
 	result, err := s.processorService.CreatePayment(request)
 
