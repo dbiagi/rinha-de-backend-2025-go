@@ -20,7 +20,7 @@ GOINSTALL = ${GOEXEC} install
 GO_BUILD_ENVS=CGO_ENABLED=0 GOOS=linux
 GO_BUILD_FLAGS=-a -installsuffix cgo -ldflags "-s -w"
 
-.PHONY: all tests test-unit test-integration test-coverage serve-dev infra-up infra-down deps build tools infra-up-processors infra-down-processors
+.PHONY: all tests test-unit test-integration test-coverage serve-dev infra-up infra-down deps build tools infra-up-processors infra-down-processors build-image
 
 tests:
 	make test-unit
