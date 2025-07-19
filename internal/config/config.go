@@ -38,11 +38,13 @@ type WebConfig struct {
 }
 
 type DatabaseConfig struct {
-	Host         string
-	Port         int
-	User         string
-	Password     string
-	DatabaseName string
+	Host               string
+	Port               int
+	User               string
+	Password           string
+	DatabaseName       string
+	MaxIdleConnections int
+	MaxOpenConnections int
 }
 
 type ProcessorConfig struct {
@@ -59,6 +61,8 @@ func LoadConfig(env string) Configuration {
 	port, _ := strconv.Atoi(os.Getenv("PORT"))
 	dbPort, _ := strconv.Atoi(os.Getenv("DB_PORT"))
 	mrt, _ := strconv.Atoi(os.Getenv("PROCESSOR_MAX_RESPONSE_TIME"))
+	idleConn, _ := strconv.Atoi(os.Getenv("DB_MAX_IDLE_CONNECTIONS"))
+	openConn, _ := strconv.Atoi(os.Getenv("DB_MAX_OPEN_CONNECTIONS"))
 
 	return Configuration{
 		WebConfig: WebConfig{
@@ -74,11 +78,13 @@ func LoadConfig(env string) Configuration {
 			Environment: env,
 		},
 		DatabaseConfig: DatabaseConfig{
-			Host:         os.Getenv("DB_HOST"),
-			Port:         dbPort,
-			User:         os.Getenv("DB_USER"),
-			Password:     os.Getenv("DB_PASSWORD"),
-			DatabaseName: os.Getenv("DB_NAME"),
+			Host:               os.Getenv("DB_HOST"),
+			Port:               dbPort,
+			User:               os.Getenv("DB_USER"),
+			Password:           os.Getenv("DB_PASSWORD"),
+			DatabaseName:       os.Getenv("DB_NAME"),
+			MaxIdleConnections: idleConn,
+			MaxOpenConnections: openConn,
 		},
 		ProcessorConfig: ProcessorConfig{
 			DefaultHost:            os.Getenv("PROCESSOR_DEFAULT_HOST"),

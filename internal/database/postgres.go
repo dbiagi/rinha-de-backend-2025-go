@@ -41,6 +41,9 @@ func NewDatabase(cfg config.DatabaseConfig) (*Database, error) {
 		return nil, err
 	}
 
+	conn.SetMaxIdleConns(cfg.MaxIdleConnections)
+	conn.SetMaxOpenConns(cfg.MaxOpenConnections)
+
 	if err := conn.Ping(); err != nil {
 		return nil, err
 	}
