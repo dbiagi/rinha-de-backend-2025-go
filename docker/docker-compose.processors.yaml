@@ -28,7 +28,7 @@ x-service-templates:
 services:
   payment-processor-1:
     <<: *payment-processor
-    container_name: payment-processor-default
+    container_name: dev-payment-processor-default
     hostname: payment-processor-default
     environment:
       - TRANSACTION_FEE=0.05
@@ -42,12 +42,12 @@ services:
     
   payment-processor-db-1:
     <<: *payment-processor-db
-    container_name: payment-processor-default-db
+    container_name: dev-payment-processor-default-db
     hostname: payment-processor-default-db
 
   payment-processor-2:
     <<: *payment-processor
-    container_name: payment-processor-fallback
+    container_name: dev-payment-processor-fallback
     hostname: payment-processor-fallback
     environment:
       - TRANSACTION_FEE=0.15
@@ -61,7 +61,7 @@ services:
   
   payment-processor-db-2:
     <<: *payment-processor-db
-    container_name: payment-processor-fallback-db
+    container_name: dev-payment-processor-fallback-db
     hostname: payment-processor-fallback-db
 
 networks:

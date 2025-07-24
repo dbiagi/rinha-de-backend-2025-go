@@ -21,3 +21,5 @@ CREATE TABLE payments (
 );
 CREATE INDEX idx_payments_processor_id_requested_at ON payments (processor_id, requested_at);
 CREATE INDEX idx_payments_requested_at ON payments (requested_at);
+
+ALTER SYSTEM SET max_connections = 100;

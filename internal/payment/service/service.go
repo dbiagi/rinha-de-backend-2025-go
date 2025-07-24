@@ -10,18 +10,22 @@ import (
 )
 
 type PaymentService struct {
-	repository       *repository.PaymentRepository
-	processorService processor.PaymentProcessorService
+	repository           *repository.PaymentRepository
+	processorService     processor.PaymentProcessorService
+	maxRetry             int
+	retryBackoffDuration int
 }
 
-func NewPaymentService(r *repository.PaymentRepository, ps processor.PaymentProcessorService) PaymentService {
+func NewPaymentService(r *repository.PaymentRepository, ps processor.PaymentProcessorService, maxRetry int, retryBackoff int) PaymentService {
 	return PaymentService{
-		repository:       r,
-		processorService: ps,
+		repository:           r,
+		processorService:     ps,
+		maxRetry:             maxRetry,
+		retryBackoffDuration: retryBackoff,
 	}
 }
 
-func (s *PaymentService) Create(request domain.PaymentCreationRequest) error {
+func (s *PaymentService) Create(request domain.PaymentCreationRequest, retryCount int) error {
 	request.RequestedAt = time.Now()
 
 	slog.Info(fmt.Sprintf("Creating payment for request=%+v", request))
@@ -29,6 +33,7 @@ func (s *PaymentService) Create(request domain.PaymentCreationRequest) error {
 	result, err := s.processorService.CreatePayment(request)
 
 	if err != nil {
+		go s.retry(request, retryCount+1)
 		return err
 	}
 
@@ -46,6 +51,10 @@ func (s *PaymentService) Create(request domain.PaymentCreationRequest) error {
 		return err
 	}
 
+	if retryCount != 0 {
+		slog.Info(fmt.Sprintf("Payment created after %d retries. Request=%+v.", retryCount, request))
+	}
+
 	return nil
 }
 
@@ -58,4 +67,20 @@ func (s *PaymentService) Summary(from time.Time, to time.Time) *domain.PaymentSu
 	}
 
 	return summary
+}
+
+func (s *PaymentService) retry(pcr domain.PaymentCreationRequest, retryCount int) {
+	if retryCount > s.maxRetry {
+		slog.Error(fmt.Sprintf("Max retries reached for request %+v", pcr))
+		return
+	}
+
+	interval := s.retryBackoffDuration * int(time.Millisecond)
+	ticker := time.NewTicker(time.Duration(interval))
+	defer ticker.Stop()
+	<-ticker.C
+
+	slog.Info(fmt.Sprintf("Retry number %d for request %+v", retryCount, pcr))
+
+	s.Create(pcr, retryCount)
 }

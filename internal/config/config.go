@@ -20,6 +20,8 @@ type Configuration struct {
 	AppConfig
 	DatabaseConfig
 	ProcessorConfig
+	MaxPaymentCreationRetries int
+	RetryBackoffDuration      int
 }
 
 type AppConfig struct {
@@ -63,6 +65,8 @@ func LoadConfig(env string) Configuration {
 	mrt, _ := strconv.Atoi(os.Getenv("PROCESSOR_MAX_RESPONSE_TIME"))
 	idleConn, _ := strconv.Atoi(os.Getenv("DB_MAX_IDLE_CONNECTIONS"))
 	openConn, _ := strconv.Atoi(os.Getenv("DB_MAX_OPEN_CONNECTIONS"))
+	maxRetries, _ := strconv.Atoi(os.Getenv("MAX_PAYMENT_RETRIES"))
+	retryBackoff, _ := strconv.Atoi(os.Getenv("RETRY_BACKOFF"))
 
 	return Configuration{
 		WebConfig: WebConfig{
@@ -91,6 +95,8 @@ func LoadConfig(env string) Configuration {
 			FallbackHost:           os.Getenv("PROCESSOR_FALLBACK_HOST"),
 			MaxAllowedResponseTime: mrt,
 		},
+		MaxPaymentCreationRetries: maxRetries,
+		RetryBackoffDuration:      retryBackoff,
 	}
 }
 

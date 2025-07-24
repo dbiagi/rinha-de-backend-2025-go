@@ -30,6 +30,8 @@ var (
 	}
 )
 
+const databaseAppName = "rinha-http-server"
+
 type (
 	Server struct {
 		config.Configuration
@@ -59,7 +61,7 @@ func (s *Server) Start() {
 }
 
 func connectToDatabase(cfg config.DatabaseConfig) *database.Database {
-	db, err := database.NewDatabase(cfg)
+	db, err := database.NewDatabase(cfg, databaseAppName)
 
 	if err != nil {
 		slog.Error("Error connecting to database", slog.String("error", err.Error()))
@@ -124,11 +126,11 @@ func configureGracefullShutdown(server *http.Server, db *database.Database, webC
 func createHandlers(c config.Configuration, db *database.Database) appHandlers {
 	return appHandlers{
 		HealthCheckHandler: healthhandler.NewHealthCheckHandler(),
-		PaymentHandler:     createPaymentHandler(c.ProcessorConfig, db),
+		PaymentHandler:     createPaymentHandler(c, db),
 	}
 }
 
-func createPaymentHandler(c config.ProcessorConfig, db *database.Database) paymenthandler.PaymentHandler {
+func createPaymentHandler(c config.Configuration, db *database.Database) paymenthandler.PaymentHandler {
 	repository := repository.NewProcessorStatusRepository(db.Connection)
 	client := processor.NewPaymentProcessorClient()
 	service := processor.NewPaymentProcessorService(processor.ServiceConfig{
@@ -139,7 +141,7 @@ func createPaymentHandler(c config.ProcessorConfig, db *database.Database) payme
 	})
 
 	paymentRepo := paymentrepo.NewPaymentRepository(db.Connection)
-	paymentService := paymentservice.NewPaymentService(paymentRepo, service)
+	paymentService := paymentservice.NewPaymentService(paymentRepo, service, c.MaxPaymentCreationRetries, c.RetryBackoffDuration)
 	handler := paymenthandler.NewPaymentHandler(paymentService)
 
 	return handler

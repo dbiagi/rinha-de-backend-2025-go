@@ -10,29 +10,20 @@ import (
 	_ "github.com/lib/pq"
 )
 
-type (
-	Database struct {
-		Connection *sql.DB
-	}
+type Database struct {
+	Connection *sql.DB
+}
 
-	InitOptions struct {
-		Host         string
-		Port         int
-		User         string
-		Password     string
-		DatabaseName string
-	}
-)
+const ConnectionString = "postgres://%s:%s@%s:%d/%s?sslmode=disable&application_name=%s"
 
-const ConnectionString = "postgres://%s:%s@%s:%d/%s?sslmode=disable"
-
-func NewDatabase(cfg config.DatabaseConfig) (*Database, error) {
+func NewDatabase(cfg config.DatabaseConfig, appName string) (*Database, error) {
 	connStr := fmt.Sprintf(ConnectionString,
 		cfg.User,
 		cfg.Password,
 		cfg.Host,
 		cfg.Port,
 		cfg.DatabaseName,
+		appName,
 	)
 
 	conn, err := sql.Open("postgres", connStr)

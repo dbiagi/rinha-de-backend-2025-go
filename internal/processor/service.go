@@ -100,7 +100,7 @@ func (s *PaymentProcessorService) selectProcessor() *domain.PaymentProcessor {
 }
 
 func (s *PaymentProcessorService) startHealthCheckWorker() {
-	interval := time.Second * 5
+	interval := time.Second * 1
 	ticker := time.NewTicker(interval)
 	go func() {
 		for {

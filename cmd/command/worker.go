@@ -13,6 +13,8 @@ import (
 	"github.com/spf13/cobra"
 )
 
+const databaseAppName = "rinha-worker"
+
 type worker struct {
 	client *processor.PaymentProcessorClient
 	repo   *repository.PaymentProcessorRepository
@@ -28,7 +30,7 @@ func NewWorkerCommand() *cobra.Command {
 
 func work(cmd *cobra.Command, args []string) {
 	cfg := config.LoadConfig("worker")
-	db, err := database.NewDatabase(cfg.DatabaseConfig)
+	db, err := database.NewDatabase(cfg.DatabaseConfig, databaseAppName)
 
 	if err != nil {
 		slog.Error("Error connecting to database", slog.String("error", err.Error()))
@@ -66,10 +68,16 @@ func (w *worker) start() {
 }
 
 func (w *worker) updateHealth(p *domain.PaymentProcessor) {
+	slog.Info("Checking processor health.")
+
 	r, err := w.client.HealthCheck(*p)
 
 	if err != nil {
 		slog.Error("Error updating the health check status", slog.String("error", err.Error()))
+		return
+	}
+
+	if p.Failing == r.Failing || p.MinResponseTime == r.MinResponseTime {
 		return
 	}
 
