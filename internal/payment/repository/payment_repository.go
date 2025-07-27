@@ -32,7 +32,7 @@ func (r *PaymentRepository) Create(payment domain.Payment) error {
 	return nil
 }
 
-func (r *PaymentRepository) Summary(from time.Time, to time.Time) (*domain.PaymentSummary, error) {
+func (r *PaymentRepository) SummaryWithFilters(from time.Time, to time.Time) (*domain.PaymentSummary, error) {
 	query := `SELECT pp.code, SUM(p.amount), COUNT(1)
 			FROM payments p
 			INNER JOIN payment_processor pp ON pp.id = p.processor_id
@@ -44,6 +44,36 @@ func (r *PaymentRepository) Summary(from time.Time, to time.Time) (*domain.Payme
 		return nil, err
 	}
 
+	s, err := build(rows)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return s, nil
+}
+
+func (r *PaymentRepository) Summary() (*domain.PaymentSummary, error) {
+	query := `SELECT pp.code, SUM(p.amount), COUNT(1)
+			FROM payments p
+			INNER JOIN payment_processor pp ON pp.id = p.processor_id
+			GROUP BY pp.code`
+	rows, err := r.db.Query(query)
+
+	if err != nil {
+		return nil, err
+	}
+
+	s, err := build(rows)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return s, nil
+}
+
+func build(rows *sql.Rows) (*domain.PaymentSummary, error) {
 	s := &domain.PaymentSummary{
 		DefaultProcessor: domain.ProcessorSummary{
 			TotalRequests: 0,
@@ -60,7 +90,7 @@ func (r *PaymentRepository) Summary(from time.Time, to time.Time) (*domain.Payme
 		var totalRequests int
 		var totalAmount float32
 
-		if err = rows.Scan(&code, &totalAmount, &totalRequests); err != nil {
+		if err := rows.Scan(&code, &totalAmount, &totalRequests); err != nil {
 			return nil, err
 		}
 

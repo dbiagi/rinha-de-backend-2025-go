@@ -63,8 +63,19 @@ func (s *PaymentService) Create(request *domain.PaymentCreationRequest, retryCou
 	return nil
 }
 
-func (s *PaymentService) Summary(from time.Time, to time.Time) *domain.PaymentSummary {
-	summary, err := s.repository.Summary(from, to)
+func (s *PaymentService) SummaryWithFilters(from time.Time, to time.Time) *domain.PaymentSummary {
+	summary, err := s.repository.SummaryWithFilters(from, to)
+
+	if err != nil {
+		slog.Error("Error fetching summary", slog.String("error", err.Error()))
+		return &domain.PaymentSummary{}
+	}
+
+	return summary
+}
+
+func (s *PaymentService) Summary() *domain.PaymentSummary {
+	summary, err := s.repository.Summary()
 
 	if err != nil {
 		slog.Error("Error fetching summary", slog.String("error", err.Error()))

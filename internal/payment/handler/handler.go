@@ -41,8 +41,8 @@ func (ph *PaymentHandler) Summary(w http.ResponseWriter, r *http.Request) {
 	to := r.URL.Query().Get("to")
 
 	if from == "" || to == "" {
-		slog.Error("Missing 'from' or 'to' query parameters")
-		w.WriteHeader(http.StatusBadRequest)
+		s := ph.service.Summary()
+		httputil.NewJsonResponse(httputil.WithBody(s)).Response(w, r)
 		return
 	}
 
@@ -60,7 +60,7 @@ func (ph *PaymentHandler) Summary(w http.ResponseWriter, r *http.Request) {
 	}
 
 	slog.Info(fmt.Sprintf("Getting summary from=%s to=%s", from, to))
-	summary := ph.service.Summary(fromTime, toTime)
+	summary := ph.service.SummaryWithFilters(fromTime, toTime)
 
 	httputil.NewJsonResponse(httputil.WithBody(summary)).Response(w, r)
 }
