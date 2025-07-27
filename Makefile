@@ -48,8 +48,8 @@ serve-dev:
 
 infra-up:
 	@echo "Starting infrastructure..."
-	${DOCKER_COMPOSE} up -d 
 	make processors-infra-up
+	${DOCKER_COMPOSE} up -d 
 	
 infra-down:
 	@echo "Stopping infrastructure..."

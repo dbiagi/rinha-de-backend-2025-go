@@ -9,19 +9,17 @@ import (
 	"os/signal"
 	"syscall"
 
-	"rinha2025/internal/config"
-	healthhandler "rinha2025/internal/health/handler"
-	"rinha2025/internal/processor"
-	"rinha2025/internal/processor/repository"
-
-	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
 
+	"rinha2025/internal/config"
 	"rinha2025/internal/database"
+	healthhandler "rinha2025/internal/health/handler"
 	paymenthandler "rinha2025/internal/payment/handler"
 	paymentrepo "rinha2025/internal/payment/repository"
 	paymentservice "rinha2025/internal/payment/service"
-	"rinha2025/pkg/middleware"
+	"rinha2025/internal/processor"
+	"rinha2025/internal/processor/repository"
+	processorservice "rinha2025/internal/processor/service"
 )
 
 var (
@@ -52,6 +50,7 @@ func NewServer(c config.Configuration) *Server {
 }
 
 func (s *Server) Start() {
+	setLogLevel(s.LogLevel)
 	server, router := createServer(s.Configuration.WebConfig)
 	db := connectToDatabase(s.DatabaseConfig)
 	handlers := createHandlers(s.Configuration, db)
@@ -96,12 +95,10 @@ func createServer(webConfig config.WebConfig) (*http.Server, *mux.Router) {
 }
 
 func registerRoutesAndMiddlewares(router *mux.Router, h appHandlers) {
-	router.Use(middleware.TraceIdMiddleware)
 	router.Use(mux.CORSMethodMiddleware(router))
 	router.HandleFunc("/health", h.HealthCheckHandler.Health).Methods(http.MethodGet)
 	router.HandleFunc("/payments", h.PaymentHandler.CreatePayment).Methods(http.MethodPost)
 	router.HandleFunc("/payments-summary", h.PaymentHandler.Summary).Methods(http.MethodGet)
-	router.Use(handlers.CompressHandler)
 }
 
 func configureGracefullShutdown(server *http.Server, db *database.Database, webConfig config.WebConfig) {
@@ -133,7 +130,7 @@ func createHandlers(c config.Configuration, db *database.Database) appHandlers {
 func createPaymentHandler(c config.Configuration, db *database.Database) paymenthandler.PaymentHandler {
 	repository := repository.NewProcessorStatusRepository(db.Connection)
 	client := processor.NewPaymentProcessorClient()
-	service := processor.NewPaymentProcessorService(processor.ServiceConfig{
+	service := processorservice.NewPaymentProcessorService(processorservice.ServiceConfig{
 		PaymentProcessorClient:     client,
 		PaymentProcessorRepository: repository,
 		DefaultHost:                c.DefaultHost,
@@ -141,8 +138,26 @@ func createPaymentHandler(c config.Configuration, db *database.Database) payment
 	})
 
 	paymentRepo := paymentrepo.NewPaymentRepository(db.Connection)
-	paymentService := paymentservice.NewPaymentService(paymentRepo, service, c.MaxPaymentCreationRetries, c.RetryBackoffDuration)
+	paymentService := paymentservice.NewPaymentService(paymentRepo, service, c)
 	handler := paymenthandler.NewPaymentHandler(paymentService)
 
 	return handler
+}
+
+func setLogLevel(level string) {
+	l := slog.LevelInfo
+
+	if level == "DEBUG" {
+		l = slog.LevelDebug
+	}
+
+	if level == "ERROR" {
+		l = slog.LevelInfo
+	}
+
+	if level == "WARN" {
+		l = slog.LevelWarn
+	}
+
+	slog.SetLogLoggerLevel(l)
 }

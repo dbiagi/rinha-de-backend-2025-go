@@ -36,7 +36,7 @@ services:
       - INITIAL_TOKEN=123
       - DB_CONNECTION_STRING=Host=payment-processor-default-db;Port=5432;Database=rinha;Username=postgres;Password=postgres;Minimum Pool Size=15;Maximum Pool Size=20;Connection Pruning Interval=3
     ports:
-      - 8001:8080
+      - 8005:8080
     depends_on:
       - payment-processor-db-1
     
@@ -55,7 +55,7 @@ services:
       - INITIAL_TOKEN=123
       - DB_CONNECTION_STRING=Host=payment-processor-fallback-db;Port=5432;Database=rinha;Username=postgres;Password=postgres;Minimum Pool Size=15;Maximum Pool Size=20;Connection Pruning Interval=3
     ports:
-      - 8002:8080
+      - 8006:8080
     depends_on:
       - payment-processor-db-2
   

@@ -3,6 +3,7 @@ package repository
 import (
 	"database/sql"
 	"rinha2025/internal/domain"
+	"rinha2025/pkg/timeutil"
 	"time"
 )
 
@@ -20,7 +21,7 @@ func (r *PaymentRepository) Create(payment domain.Payment) error {
 		query,
 		payment.CorrelationID.String(),
 		payment.Amount,
-		payment.RequestedAt.Format(time.RFC3339),
+		payment.RequestedAt.Format(timeutil.CustomTimeFormat),
 		payment.ProcessorID,
 	)
 

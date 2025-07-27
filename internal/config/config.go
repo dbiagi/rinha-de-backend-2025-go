@@ -22,6 +22,8 @@ type Configuration struct {
 	ProcessorConfig
 	MaxPaymentCreationRetries int
 	RetryBackoffDuration      int
+	RetryWorkersCount         int
+	LogLevel                  string
 }
 
 type AppConfig struct {
@@ -67,6 +69,7 @@ func LoadConfig(env string) Configuration {
 	openConn, _ := strconv.Atoi(os.Getenv("DB_MAX_OPEN_CONNECTIONS"))
 	maxRetries, _ := strconv.Atoi(os.Getenv("MAX_PAYMENT_RETRIES"))
 	retryBackoff, _ := strconv.Atoi(os.Getenv("RETRY_BACKOFF"))
+	retryWorkersCount, _ := strconv.Atoi(os.Getenv("RETRY_WORKERS_COUNT"))
 
 	return Configuration{
 		WebConfig: WebConfig{
@@ -97,6 +100,8 @@ func LoadConfig(env string) Configuration {
 		},
 		MaxPaymentCreationRetries: maxRetries,
 		RetryBackoffDuration:      retryBackoff,
+		RetryWorkersCount:         retryWorkersCount,
+		LogLevel:                  os.Getenv("LOG_LEVEL"),
 	}
 }
 

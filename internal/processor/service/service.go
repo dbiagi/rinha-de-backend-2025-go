@@ -1,9 +1,11 @@
-package processor
+package service
 
 import (
 	"log/slog"
 	"rinha2025/internal/domain"
+	"rinha2025/internal/processor"
 	processorerrors "rinha2025/internal/processor/errors"
+
 	"rinha2025/internal/processor/repository"
 	"time"
 )
@@ -11,7 +13,7 @@ import (
 const MaxAcceptableResponseTime = 100
 
 type PaymentProcessorService struct {
-	client            *PaymentProcessorClient
+	client            *processor.PaymentProcessorClient
 	repository        *repository.PaymentProcessorRepository
 	defaultProcessor  *domain.PaymentProcessor
 	fallbackProcessor *domain.PaymentProcessor
@@ -22,7 +24,7 @@ type PaymentCreateResult struct {
 }
 
 type ServiceConfig struct {
-	*PaymentProcessorClient
+	*processor.PaymentProcessorClient
 	*repository.PaymentProcessorRepository
 	DefaultHost  string
 	FallbackHost string
@@ -60,15 +62,20 @@ func NewPaymentProcessorService(c ServiceConfig) PaymentProcessorService {
 		}
 	}
 
-	pps.startHealthCheckWorker()
+	go pps.startHealthCheckWorker()
 
 	return pps
 }
 
-func (s *PaymentProcessorService) CreatePayment(r domain.PaymentCreationRequest) (*PaymentCreateResult, error) {
-	p := s.selectProcessor()
+func (s *PaymentProcessorService) CreatePayment(r *domain.PaymentCreationRequest) (*PaymentCreateResult, error) {
+	p, err := s.selectProcessor()
 
-	err := s.client.RequestCreatePayment(r, p)
+	if err != nil {
+		slog.Error("No processor available.", slog.String("error", err.Error()))
+		return nil, err
+	}
+
+	err = s.client.RequestCreatePayment(r, p)
 
 	if err != nil && p.Code == domain.DefaultPaymentProcessor {
 		slog.Error("Error with the default processor, using fallback", slog.String("error", err.Error()))
@@ -92,23 +99,25 @@ func (s *PaymentProcessorService) CreatePayment(r domain.PaymentCreationRequest)
 	return pcr, nil
 }
 
-func (s *PaymentProcessorService) selectProcessor() *domain.PaymentProcessor {
-	if !s.defaultProcessor.Failing || s.defaultProcessor.MinResponseTime < MaxAcceptableResponseTime {
-		return s.defaultProcessor
+func (s *PaymentProcessorService) selectProcessor() (*domain.PaymentProcessor, error) {
+	if !s.defaultProcessor.Failing && s.defaultProcessor.MinResponseTime <= MaxAcceptableResponseTime {
+		return s.defaultProcessor, nil
 	}
-	return s.fallbackProcessor
+
+	if !s.fallbackProcessor.Failing && s.fallbackProcessor.MinResponseTime <= MaxAcceptableResponseTime {
+		return s.fallbackProcessor, nil
+	}
+
+	return nil, processorerrors.ErrNoProcessorAvailable
 }
 
 func (s *PaymentProcessorService) startHealthCheckWorker() {
 	interval := time.Second * 1
 	ticker := time.NewTicker(interval)
-	go func() {
-		for {
-			<-ticker.C
-			s.checkHealth()
-		}
-	}()
 
+	for range ticker.C {
+		s.checkHealth()
+	}
 }
 
 func (s *PaymentProcessorService) checkHealth() {

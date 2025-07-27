@@ -31,7 +31,7 @@ func (ph *PaymentHandler) CreatePayment(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	go ph.service.Create(cpr, 0)
+	go ph.service.Create(&cpr, 0)
 
 	w.WriteHeader(http.StatusCreated)
 }

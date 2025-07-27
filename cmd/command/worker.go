@@ -68,8 +68,6 @@ func (w *worker) start() {
 }
 
 func (w *worker) updateHealth(p *domain.PaymentProcessor) {
-	slog.Info("Checking processor health.")
-
 	r, err := w.client.HealthCheck(*p)
 
 	if err != nil {

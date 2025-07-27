@@ -3,37 +3,42 @@ package service
 import (
 	"fmt"
 	"log/slog"
+	"rinha2025/internal/config"
 	"rinha2025/internal/domain"
 	"rinha2025/internal/payment/repository"
-	"rinha2025/internal/processor"
+	processorservice "rinha2025/internal/processor/service"
 	"time"
 )
 
 type PaymentService struct {
 	repository           *repository.PaymentRepository
-	processorService     processor.PaymentProcessorService
+	processorService     processorservice.PaymentProcessorService
 	maxRetry             int
 	retryBackoffDuration int
+	retryQueue           chan *domain.PaymentCreationRequest
 }
 
-func NewPaymentService(r *repository.PaymentRepository, ps processor.PaymentProcessorService, maxRetry int, retryBackoff int) PaymentService {
-	return PaymentService{
+func NewPaymentService(r *repository.PaymentRepository, ps processorservice.PaymentProcessorService, cfg config.Configuration) PaymentService {
+	svc := PaymentService{
 		repository:           r,
 		processorService:     ps,
-		maxRetry:             maxRetry,
-		retryBackoffDuration: retryBackoff,
+		maxRetry:             cfg.MaxPaymentCreationRetries,
+		retryBackoffDuration: cfg.RetryBackoffDuration,
+		retryQueue:           make(chan *domain.PaymentCreationRequest, 3000),
 	}
+
+	for range cfg.RetryWorkersCount {
+		go svc.startRetryQueueConsumer()
+	}
+
+	return svc
 }
 
-func (s *PaymentService) Create(request domain.PaymentCreationRequest, retryCount int) error {
-	request.RequestedAt = time.Now()
-
-	slog.Info(fmt.Sprintf("Creating payment for request=%+v", request))
-
+func (s *PaymentService) Create(request *domain.PaymentCreationRequest, retryCount int) error {
 	result, err := s.processorService.CreatePayment(request)
 
 	if err != nil {
-		go s.retry(request, retryCount+1)
+		s.retryQueue <- request
 		return err
 	}
 
@@ -69,18 +74,9 @@ func (s *PaymentService) Summary(from time.Time, to time.Time) *domain.PaymentSu
 	return summary
 }
 
-func (s *PaymentService) retry(pcr domain.PaymentCreationRequest, retryCount int) {
-	if retryCount > s.maxRetry {
-		slog.Error(fmt.Sprintf("Max retries reached for request %+v", pcr))
-		return
+func (s *PaymentService) startRetryQueueConsumer() {
+	for request := range s.retryQueue {
+		time.Sleep(time.Millisecond * 100)
+		s.Create(request, 0)
 	}
-
-	interval := s.retryBackoffDuration * int(time.Millisecond)
-	ticker := time.NewTicker(time.Duration(interval))
-	defer ticker.Stop()
-	<-ticker.C
-
-	slog.Info(fmt.Sprintf("Retry number %d for request %+v", retryCount, pcr))
-
-	s.Create(pcr, retryCount)
 }
